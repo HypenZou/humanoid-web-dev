@@ -10,24 +10,13 @@ import {
   Search,
   Upload,
 } from 'lucide-react';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import ModelCard from '@/components/ModelCard';
 import AuthModal from '@/components/AuthModal';
-import ProfilePage from '@/components/ProfilePage';
-import ModelsPage from '@/components/ModelsPage';
-import DatasetsPage from '@/components/DatasetsPage';
-import UploadPage from '@/components/UploadPage';
-import DocsPage from '@/components/DocsPage';
-import DeployPage from '@/components/DeployPage';
 
 export default function Home() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [showModels, setShowModels] = useState(false);
-  const [showDatasets, setShowDatasets] = useState(false);
-  const [showUpload, setShowUpload] = useState(false);
-  const [showDocs, setShowDocs] = useState(false);
-  const [showDeploy, setShowDeploy] = useState(false);
   const [user, setUser] = useState(null);
   const [featuredModels, setFeaturedModels] = useState([
     {
@@ -66,216 +55,12 @@ export default function Home() {
   ]);
 
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user || null);
-      setShowProfile(false);
     });
 
-    const handleShowUpload = () => {
-      setShowUpload(true);
-      setShowProfile(false);
-      setShowModels(false);
-      setShowDatasets(false);
-      setShowDocs(false);
-      setShowDeploy(false);
-    };
-
-    window.addEventListener('showUpload', handleShowUpload);
-
-    return () => {
-      subscription.unsubscribe();
-      window.removeEventListener('showUpload', handleShowUpload);
-    };
+    return () => subscription.unsubscribe();
   }, []);
-
-  const handleUploadClick = () => {
-    if (!user) {
-      setIsAuthModalOpen(true);
-    } else {
-      setShowUpload(true);
-      setShowProfile(false);
-      setShowModels(false);
-      setShowDatasets(false);
-      setShowDocs(false);
-      setShowDeploy(false);
-    }
-  };
-
-  const handleProfileClick = () => {
-    setShowProfile(true);
-    setShowModels(false);
-    setShowDatasets(false);
-    setShowUpload(false);
-    setShowDocs(false);
-    setShowDeploy(false);
-  };
-
-  const handleHomeClick = () => {
-    setShowProfile(false);
-    setShowModels(false);
-    setShowDatasets(false);
-    setShowUpload(false);
-    setShowDocs(false);
-    setShowDeploy(false);
-  };
-
-  const handleModelsClick = () => {
-    setShowModels(true);
-    setShowProfile(false);
-    setShowDatasets(false);
-    setShowUpload(false);
-    setShowDocs(false);
-    setShowDeploy(false);
-  };
-
-  const handleDatasetsClick = () => {
-    setShowDatasets(true);
-    setShowProfile(false);
-    setShowModels(false);
-    setShowUpload(false);
-    setShowDocs(false);
-    setShowDeploy(false);
-  };
-
-  const handleDocsClick = () => {
-    setShowDocs(true);
-    setShowDatasets(false);
-    setShowProfile(false);
-    setShowModels(false);
-    setShowUpload(false);
-    setShowDeploy(false);
-  };
-
-  const handleDeployClick = () => {
-    setShowDeploy(true);
-    setShowDocs(false);
-    setShowDatasets(false);
-    setShowProfile(false);
-    setShowModels(false);
-    setShowUpload(false);
-  };
-
-  if (user && showProfile) {
-    return (
-      <>
-        <Navbar
-          user={user}
-          onAuthClick={() => setIsAuthModalOpen(true)}
-          onSignOut={() => supabase.auth.signOut()}
-          onProfileClick={handleProfileClick}
-          onHomeClick={handleHomeClick}
-          onModelsClick={handleModelsClick}
-          onDatasetsClick={handleDatasetsClick}
-          onDocsClick={handleDocsClick}
-          onDeployClick={handleDeployClick}
-          showProfile={showProfile}
-        />
-        <ProfilePage user={user} />
-      </>
-    );
-  }
-
-  if (showModels) {
-    return (
-      <>
-        <Navbar
-          user={user}
-          onAuthClick={() => setIsAuthModalOpen(true)}
-          onSignOut={() => supabase.auth.signOut()}
-          onProfileClick={handleProfileClick}
-          onHomeClick={handleHomeClick}
-          onModelsClick={handleModelsClick}
-          onDatasetsClick={handleDatasetsClick}
-          onDocsClick={handleDocsClick}
-          onDeployClick={handleDeployClick}
-          showProfile={showProfile}
-        />
-        <ModelsPage />
-      </>
-    );
-  }
-
-  if (showDatasets) {
-    return (
-      <>
-        <Navbar
-          user={user}
-          onAuthClick={() => setIsAuthModalOpen(true)}
-          onSignOut={() => supabase.auth.signOut()}
-          onProfileClick={handleProfileClick}
-          onHomeClick={handleHomeClick}
-          onModelsClick={handleModelsClick}
-          onDatasetsClick={handleDatasetsClick}
-          onDocsClick={handleDocsClick}
-          onDeployClick={handleDeployClick}
-          showProfile={showProfile}
-        />
-        <DatasetsPage />
-      </>
-    );
-  }
-
-  if (showDocs) {
-    return (
-      <>
-        <Navbar
-          user={user}
-          onAuthClick={() => setIsAuthModalOpen(true)}
-          onSignOut={() => supabase.auth.signOut()}
-          onProfileClick={handleProfileClick}
-          onHomeClick={handleHomeClick}
-          onModelsClick={handleModelsClick}
-          onDatasetsClick={handleDatasetsClick}
-          onDocsClick={handleDocsClick}
-          onDeployClick={handleDeployClick}
-          showProfile={showProfile}
-        />
-        <DocsPage />
-      </>
-    );
-  }
-
-  if (showDeploy) {
-    return (
-      <>
-        <Navbar
-          user={user}
-          onAuthClick={() => setIsAuthModalOpen(true)}
-          onSignOut={() => supabase.auth.signOut()}
-          onProfileClick={handleProfileClick}
-          onHomeClick={handleHomeClick}
-          onModelsClick={handleModelsClick}
-          onDatasetsClick={handleDatasetsClick}
-          onDocsClick={handleDocsClick}
-          onDeployClick={handleDeployClick}
-          showProfile={showProfile}
-        />
-        <DeployPage />
-      </>
-    );
-  }
-
-  if (showUpload) {
-    return (
-      <>
-        <Navbar
-          user={user}
-          onAuthClick={() => setIsAuthModalOpen(true)}
-          onSignOut={() => supabase.auth.signOut()}
-          onProfileClick={handleProfileClick}
-          onHomeClick={handleHomeClick}
-          onModelsClick={handleModelsClick}
-          onDatasetsClick={handleDatasetsClick}
-          onDocsClick={handleDocsClick}
-          onDeployClick={handleDeployClick}
-          showProfile={showProfile}
-        />
-        <UploadPage />
-      </>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -283,13 +68,13 @@ export default function Home() {
         user={user}
         onAuthClick={() => setIsAuthModalOpen(true)}
         onSignOut={() => supabase.auth.signOut()}
-        onProfileClick={handleProfileClick}
-        onHomeClick={handleHomeClick}
-        onModelsClick={handleModelsClick}
-        onDatasetsClick={handleDatasetsClick}
-        onDocsClick={handleDocsClick}
-        onDeployClick={handleDeployClick}
-        showProfile={showProfile}
+        onProfileClick={() => {}}
+        onHomeClick={() => {}}
+        onModelsClick={() => {}}
+        onDatasetsClick={() => {}}
+        onDocsClick={() => {}}
+        onDeployClick={() => {}}
+        showProfile={false}
       />
 
       {/* Hero Section */}
@@ -304,20 +89,20 @@ export default function Home() {
               models and datasets
             </p>
             <div className="flex justify-center space-x-4">
-              <button
-                onClick={handleUploadClick}
+              <Link
+                href="/upload"
                 className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center"
               >
                 <Upload className="mr-2" size={20} />
                 Upload Model
-              </button>
-              <button 
-                onClick={handleDeployClick}
+              </Link>
+              <Link 
+                href="/deploy"
                 className="border-2 border-white px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors flex items-center"
               >
                 <Cloud className="mr-2" size={20} />
                 Deploy Model
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -340,8 +125,8 @@ export default function Home() {
       {/* Features Section */}
       <div className="container mx-auto px-4 py-16">
         <div className="grid md:grid-cols-3 gap-8">
-          <div
-            onClick={handleModelsClick}
+          <Link
+            href="/models"
             className="bg-white p-6 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
           >
             <Robot className="text-blue-600 mb-4" size={32} />
@@ -350,9 +135,9 @@ export default function Home() {
               Access a growing collection of pre-trained humanoid models ready
               for deployment.
             </p>
-          </div>
-          <div
-            onClick={handleDatasetsClick}
+          </Link>
+          <Link
+            href="/datasets"
             className="bg-white p-6 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
           >
             <Database className="text-blue-600 mb-4" size={32} />
@@ -361,9 +146,9 @@ export default function Home() {
               High-quality datasets for training and fine-tuning humanoid
               models.
             </p>
-          </div>
-          <div 
-            onClick={handleDeployClick}
+          </Link>
+          <Link 
+            href="/deploy"
             className="bg-white p-6 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
           >
             <Cloud className="text-blue-600 mb-4" size={32} />
@@ -372,7 +157,7 @@ export default function Home() {
               Simple infrastructure for deploying models to real or simulated
               robots.
             </p>
-          </div>
+          </Link>
         </div>
       </div>
 

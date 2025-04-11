@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Github, Menu, Notebook as Robot, LogOut, User, ChevronDown } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -21,15 +22,10 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ 
   user, 
   onAuthClick, 
-  onSignOut, 
-  onProfileClick,
-  onHomeClick,
-  onModelsClick,
-  onDatasetsClick,
-  onDocsClick,
-  onDeployClick,
+  onSignOut,
   showProfile 
 }) => {
+  const router = useRouter();
   const [displayName, setDisplayName] = useState<string>('');
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -72,7 +68,7 @@ const Navbar: React.FC<NavbarProps> = ({
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            <Link href="/" onClick={onHomeClick} className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center space-x-2">
               <Robot className="text-blue-600" size={28} />
               <span className="font-bold text-xl">OpenHumanoid</span>
             </Link>
@@ -81,28 +77,24 @@ const Navbar: React.FC<NavbarProps> = ({
           <div className="hidden md:flex items-center space-x-8">
             <Link 
               href="/models"
-              onClick={onModelsClick}
               className="text-gray-700 hover:text-blue-600"
             >
               Models
             </Link>
             <Link 
               href="/datasets"
-              onClick={onDatasetsClick}
               className="text-gray-700 hover:text-blue-600"
             >
               Datasets
             </Link>
             <Link 
               href="/docs"
-              onClick={onDocsClick}
               className="text-gray-700 hover:text-blue-600"
             >
               Docs
             </Link>
             <Link 
               href="/deploy"
-              onClick={onDeployClick}
               className="text-gray-700 hover:text-blue-600"
             >
               Deploy
@@ -136,10 +128,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50">
                     <Link
                       href="/profile"
-                      onClick={() => {
-                        onProfileClick();
-                        setShowDropdown(false);
-                      }}
+                      onClick={() => setShowDropdown(false)}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       <User size={16} className="mr-2" />

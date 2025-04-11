@@ -1,6 +1,3 @@
 {
-  "/page": "app/page.js",
-  "/deploy/page": "app/deploy/page.js",
-  "/datasets/page": "app/datasets/page.js",
-  "/models/page": "app/models/page.js"
+  "/page": "app/page.js"
 }
