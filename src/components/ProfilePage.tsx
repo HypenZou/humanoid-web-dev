@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { BarChart3, Upload, Download, Users, Edit2 } from 'lucide-react';
+import { BarChart3, Upload, Download, Users, Edit2, ArrowLeft } from 'lucide-react';
 import ModelCard from './ModelCard';
 
 interface ProfileStats {
@@ -28,6 +31,7 @@ interface UserProfile {
 }
 
 const ProfilePage: React.FC<{ user: User }> = ({ user }) => {
+  const router = useRouter();
   const [models, setModels] = useState<UserModel[]>([]);
   const [stats, setStats] = useState<ProfileStats>({
     totalUploads: 0,
@@ -131,17 +135,26 @@ const ProfilePage: React.FC<{ user: User }> = ({ user }) => {
   };
 
   const handleUploadClick = () => {
-    // Navigate to upload page
-    window.location.href = '#upload';
-    // Trigger the upload page state in the parent App component
-    const uploadEvent = new CustomEvent('showUpload');
-    window.dispatchEvent(uploadEvent);
+    router.push('/upload');
+  };
+
+  const handleBackClick = () => {
+    router.push('/');
   };
 
   const displayName = profile?.display_name || profile?.email?.split('@')[0] || 'User';
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Back Button */}
+      <button
+        onClick={handleBackClick}
+        className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
+      >
+        <ArrowLeft className="mr-2" size={20} />
+        Back to Home
+      </button>
+
       {/* Profile Header */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
         <div className="flex items-center space-x-4">

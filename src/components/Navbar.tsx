@@ -1,6 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { Github, Menu, Notebook as Robot, LogOut, User, ChevronDown } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 interface NavbarProps {
   user: any;
@@ -69,39 +72,45 @@ const Navbar: React.FC<NavbarProps> = ({
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            <button onClick={onHomeClick} className="flex items-center space-x-2">
+            <Link href="/" onClick={onHomeClick} className="flex items-center space-x-2">
               <Robot className="text-blue-600" size={28} />
               <span className="font-bold text-xl">OpenHumanoid</span>
-            </button>
+            </Link>
           </div>
 
           <div className="hidden md:flex items-center space-x-8">
-            <button 
+            <Link 
+              href="/models"
               onClick={onModelsClick}
               className="text-gray-700 hover:text-blue-600"
             >
               Models
-            </button>
-            <button 
+            </Link>
+            <Link 
+              href="/datasets"
               onClick={onDatasetsClick}
               className="text-gray-700 hover:text-blue-600"
             >
               Datasets
-            </button>
-            <button 
+            </Link>
+            <Link 
+              href="/docs"
               onClick={onDocsClick}
               className="text-gray-700 hover:text-blue-600"
             >
               Docs
-            </button>
-            <button 
+            </Link>
+            <Link 
+              href="/deploy"
               onClick={onDeployClick}
               className="text-gray-700 hover:text-blue-600"
             >
               Deploy
-            </button>
+            </Link>
             <a
               href="https://github.com/openhumanoid"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center space-x-1 text-gray-700 hover:text-blue-600"
             >
               <Github size={20} />
@@ -125,7 +134,8 @@ const Navbar: React.FC<NavbarProps> = ({
 
                 {showDropdown && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50">
-                    <button
+                    <Link
+                      href="/profile"
                       onClick={() => {
                         onProfileClick();
                         setShowDropdown(false);
@@ -134,7 +144,7 @@ const Navbar: React.FC<NavbarProps> = ({
                     >
                       <User size={16} className="mr-2" />
                       Profile
-                    </button>
+                    </Link>
                     <button
                       onClick={() => {
                         onSignOut();

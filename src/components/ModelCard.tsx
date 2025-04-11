@@ -1,4 +1,7 @@
-import React from 'react';
+'use client';
+
+import Image from 'next/image';
+import Link from 'next/link';
 import { Star, GitFork, ArrowRight } from 'lucide-react';
 
 interface ModelCardProps {
@@ -22,11 +25,15 @@ const ModelCard: React.FC<ModelCardProps> = ({
 }) => {
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      <img
-        src={image}
-        alt={name}
-        className="w-full h-48 object-cover"
-      />
+      <div className="relative w-full h-48">
+        <Image
+          src={image}
+          alt={name}
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+      </div>
       <div className="p-6">
         <h3 className="text-xl font-semibold mb-2">{name}</h3>
         <p className="text-gray-600 text-sm mb-4">{description}</p>
@@ -53,10 +60,13 @@ const ModelCard: React.FC<ModelCardProps> = ({
               <span>{forks}</span>
             </div>
           </div>
-          <button className="text-blue-600 hover:text-blue-700 flex items-center">
+          <Link 
+            href={`/models/${name.toLowerCase()}`}
+            className="text-blue-600 hover:text-blue-700 flex items-center"
+          >
             View Model
             <ArrowRight size={16} className="ml-1" />
-          </button>
+          </Link>
         </div>
       </div>
     </div>

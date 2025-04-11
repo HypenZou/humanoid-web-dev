@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
+'use client';
+
+import { useState } from 'react';
+import { supabase } from '@/lib/supabase';
 import { X } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [isSignUp, setIsSignUp] = useState(false);
