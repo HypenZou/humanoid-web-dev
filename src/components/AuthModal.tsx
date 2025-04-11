@@ -7,6 +7,7 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
+
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
