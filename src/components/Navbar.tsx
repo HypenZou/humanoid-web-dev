@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Github, Menu, Notebook as Robot, LogOut, User, ChevronDown } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { Navbar as BNavbar, Nav, NavDropdown, Container } from 'react-bootstrap';
 
 interface NavbarProps {
   user: any;
@@ -27,25 +28,12 @@ const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const router = useRouter();
   const [displayName, setDisplayName] = useState<string>('');
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user) {
       fetchUserProfile();
     }
   }, [user]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const fetchUserProfile = async () => {
     try {
@@ -64,105 +52,79 @@ const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <nav className="bg-white shadow-sm">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              <Robot className="text-blue-600" size={28} />
-              <span className="font-bold text-xl">OpenHumanoid</span>
-            </Link>
-          </div>
+    <BNavbar bg="white" expand="lg" className="shadow-sm">
+      <Container>
+        <Link href="/" passHref legacyBehavior>
+          <BNavbar.Brand className="d-flex align-items-center">
+            <Robot className="text-primary me-2" size={28} />
+            <span className="fw-bold fs-4">OpenHumanoid</span>
+          </BNavbar.Brand>
+        </Link>
 
-          <div className="hidden md:flex items-center space-x-8">
-            <Link 
-              href="/models"
-              className="text-gray-700 hover:text-blue-600"
-            >
-              Models
+        <BNavbar.Toggle aria-controls="basic-navbar-nav" />
+        <BNavbar.Collapse id="basic-navbar-nav">
+          <Nav className="ms-auto align-items-center">
+            <Link href="/models" passHref legacyBehavior>
+              <Nav.Link>Models</Nav.Link>
             </Link>
-            <Link 
-              href="/datasets"
-              className="text-gray-700 hover:text-blue-600"
-            >
-              Datasets
+            <Link href="/datasets" passHref legacyBehavior>
+              <Nav.Link>Datasets</Nav.Link>
             </Link>
-            <Link 
-              href="/docs"
-              className="text-gray-700 hover:text-blue-600"
-            >
-              Docs
+            <Link href="/docs" passHref legacyBehavior>
+              <Nav.Link>Docs</Nav.Link>
             </Link>
-            <Link 
-              href="/deploy"
-              className="text-gray-700 hover:text-blue-600"
-            >
-              Deploy
+            <Link href="/deploy" passHref legacyBehavior>
+              <Nav.Link>Deploy</Nav.Link>
             </Link>
-            <a
+            <Nav.Link 
               href="https://github.com/openhumanoid"
               target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center space-x-1 text-gray-700 hover:text-blue-600"
+              className="d-flex align-items-center"
             >
-              <Github size={20} />
-              <span>GitHub</span>
-            </a>
+              <Github size={20} className="me-1" />
+              GitHub
+            </Nav.Link>
             
             {user ? (
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center space-x-2 text-gray-700 hover:text-blue-600"
+              <NavDropdown
+                title={
+                  <div className="d-flex align-items-center">
+                    <div className="bg-primary-subtle rounded-circle d-flex align-items-center justify-content-center" style={{ width: '32px', height: '32px' }}>
+                      <span className="text-primary fw-medium">
+                        {displayName.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <span className="ms-2">{displayName}</span>
+                  </div>
+                }
+                id="user-dropdown"
+              >
+                <Link href="/profile" passHref legacyBehavior>
+                  <NavDropdown.Item>
+                    <User size={16} className="me-2" />
+                    Profile
+                  </NavDropdown.Item>
+                </Link>
+                <NavDropdown.Item 
+                  onClick={onSignOut}
+                  className="text-danger"
                 >
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 font-medium">
-                      {displayName.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <span>{displayName}</span>
-                  <ChevronDown size={16} className={`transform transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
-                </button>
-
-                {showDropdown && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50">
-                    <Link
-                      href="/profile"
-                      onClick={() => setShowDropdown(false)}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      <User size={16} className="mr-2" />
-                      Profile
-                    </Link>
-                    <button
-                      onClick={() => {
-                        onSignOut();
-                        setShowDropdown(false);
-                      }}
-                      className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                    >
-                      <LogOut size={16} className="mr-2" />
-                      Sign Out
-                    </button>
-                  </div>
-                )}
-              </div>
+                  <LogOut size={16} className="me-2" />
+                  Sign Out
+                </NavDropdown.Item>
+              </NavDropdown>
             ) : (
               <button
                 onClick={onAuthClick}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="btn btn-primary"
               >
                 Sign In
               </button>
             )}
-          </div>
-
-          <button className="md:hidden">
-            <Menu size={24} />
-          </button>
-        </div>
-      </div>
-    </nav>
+          </Nav>
+        </BNavbar.Collapse>
+      </Container>
+    </BNavbar>
   );
 };
 
