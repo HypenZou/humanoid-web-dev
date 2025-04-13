@@ -1,0 +1,1 @@
+export type OpensourceLicence = "MIT" | "Apache2.0" | "BSD" | "GPL"; 
