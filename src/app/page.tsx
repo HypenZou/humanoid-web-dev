@@ -62,6 +62,15 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
+  const handleUploadModel = (event : any) => {
+    // if (!user) {
+    //   event.preventDefault()
+    //   setIsAuthModalOpen(true);
+    // } else {
+      
+    // }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar
@@ -90,6 +99,7 @@ export default function Home() {
             </p>
             <div className="flex justify-center space-x-4">
               <Link
+               onClick={handleUploadModel}
                 href="/upload"
                 className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center"
               >
