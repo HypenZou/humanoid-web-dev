@@ -1,3 +1,5 @@
+'use server';
+
 import { supabase } from "@/lib/supabase";
 import { OpensourceLicence } from "@/types/licence";
 import { db } from "@/types/postgres";
@@ -26,7 +28,6 @@ const uploadSchema = zfd.formData({
 export async function POST(request: NextRequest) {
     const formData = await request.formData();
 
-    //todo safety
     let user_id = request.headers.get("user_id");
     if (!user_id) {
         return NextResponse.json(HttpResponse(405, "invalid user info"));
