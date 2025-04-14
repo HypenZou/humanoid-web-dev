@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { Upload, X, AlertCircle, CheckCircle, Folder } from "lucide-react";
 import LoadingOverlay from "@achmadk/react-loading-overlay";
@@ -17,17 +17,55 @@ interface UploadFile {
   relativePath?: string;
 }
 
+interface TagCategory {
+  name: string;
+  tags: string[];
+}
+
 const UploadPage: React.FC = () => {
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<TagCategory[]>([]);
   const [license, setLicense] = useState("MIT");
   const [uploading, setUploading] = useState(false);
-  const [currentTag, setCurrentTag] = useState("");
   const { showToast } = useToast();
 
   const LICENSES = ["MIT", "Apache 2.0", "BSD", "GPL", "Creative Commons"];
+
+  useEffect(() => {
+    fetchTags();
+  }, []);
+
+  const fetchTags = async () => {
+    try {
+      const { data: tagData, error } = await supabase
+        .from('tags')
+        .select('category, name')
+        .order('category')
+        .order('name');
+      console.log(tagData, error);
+
+      if (error) throw error;
+
+      // Group tags by category
+      const groupedTags = tagData.reduce((acc: TagCategory[], tag) => {
+        const existingCategory = acc.find(c => c.name === tag.category);
+        if (existingCategory) {
+          existingCategory.tags.push(tag.name);
+        } else {
+          acc.push({ name: tag.category, tags: [tag.name] });
+        }
+        return acc;
+      }, []);
+
+      setAvailableTags(groupedTags);
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+      showToast('Failed to load tags', 'danger');
+    }
+  };
 
   const processFiles = async (items: DataTransferItemList) => {
     const newFiles: UploadFile[] = [];
@@ -126,13 +164,10 @@ const UploadPage: React.FC = () => {
     setFiles((prev) => prev.filter((file) => file.id !== id));
   };
 
-  const handleTagKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && currentTag.trim()) {
-      e.preventDefault();
-      if (!tags.includes(currentTag.trim())) {
-        setTags([...tags, currentTag.trim()]);
-      }
-      setCurrentTag("");
+  const handleTagSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedTag = e.target.value;
+    if (selectedTag && !tags.includes(selectedTag)) {
+      setTags([...tags, selectedTag]);
     }
   };
 
@@ -140,12 +175,10 @@ const UploadPage: React.FC = () => {
     setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
-
   const uploadFile = async (file: UploadFile) => {
     try {
       const auth = await supabase.auth.getUser();
       if (!auth.data.user) throw new Error("Not authenticated");
-
 
       const userId = auth.data.user.id;
       const filePath = `${userId}/${file.relativePath || file.file.name}`;
@@ -153,12 +186,11 @@ const UploadPage: React.FC = () => {
       // Upload file to Supabase storage
       const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL!}/storage/v1/object/models/${filePath}`;
       let session = await supabase.auth.getSession();
-     // @ts-ignore
+      // @ts-ignore
       const headers = supabase.auth.headers;
       headers['Authorization'] = `Bearer ${session.data.session!.access_token}`;
       console.log(headers)
 
-      
       const formData = new FormData();
       formData.append('cacheControl', '3600');
       formData.append('', file.file);
@@ -388,14 +420,22 @@ const UploadPage: React.FC = () => {
                   </span>
                 ))}
               </div>
-              <input
-                type="text"
-                value={currentTag}
-                onChange={(e) => setCurrentTag(e.target.value)}
-                onKeyDown={handleTagKeyDown}
-                placeholder="Type a tag and press Enter"
+              <select
+                onChange={handleTagSelect}
+                value=""
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              >
+                <option value="">Select a tag...</option>
+                {availableTags.map((category) => (
+                  <optgroup key={category.name} label={category.name}>
+                    {category.tags.map((tag) => (
+                      <option key={tag} value={tag}>
+                        {tag}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
             </div>
 
             {/* License */}
