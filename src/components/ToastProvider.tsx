@@ -1,56 +1,46 @@
-// ToastProvider.tsx
-import React, {
-  createContext,
-  useContext,
-  useState,
-  ReactNode,
-  useCallback,
-} from "react";
+import React, { createContext, useContext, useState, ReactNode } from "react";
 import { Toast, ToastContainer } from "react-bootstrap";
 
-export type ToastType = "Primary" | "Success" | "Danger";
+type ToastType = "success" | "danger" | "warning" | "info";
 
-interface ToastContextProps {
-  showToast: (type: ToastType, message: string) => void;
+interface ToastContextType {
+  showToast: (message: string, type?: ToastType) => void;
 }
 
-const ToastContext = createContext<ToastContextProps>({
+const ToastContext = createContext<ToastContextType>({
   showToast: () => {},
 });
 
-export function useToast() {
-  return useContext(ToastContext);
-}
+export const useToast = () => useContext(ToastContext);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [show, setShow] = useState(false);
-  const [type, setType] = useState("success");
   const [message, setMessage] = useState("");
+  const [type, setType] = useState<ToastType>("success");
 
-  const showToast = useCallback((type: ToastType, msg: string) => {
-    setMessage(msg);
+  const showToast = (message: string, type: ToastType = "success") => {
+    setMessage(message);
+    setType(type);
     setShow(true);
-    setTimeout(() => {
-      setShow(false);
-    }, 3000);
-  }, []);
+  };
 
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-
       <ToastContainer
-        position="bottom-end"
-        className="p-3 z-50 absolute"
+        className="position-fixed top-0 start-50 translate-middle-x p-3"
+        style={{ zIndex: 1000 }}
       >
-        <Toast
-          onClose={() => setShow(false)}
-          show={show}
-          bg={type}
-          delay={3000}
+        <Toast 
+          show={show} 
+          onClose={() => setShow(false)} 
+          delay={5000} 
           autohide
+          bg={type}
         >
-          <Toast.Body className="text-white">{message}</Toast.Body>
+          <Toast.Body className="text-white">
+            {message}
+          </Toast.Body>
         </Toast>
       </ToastContainer>
     </ToastContext.Provider>
