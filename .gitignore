@@ -8,6 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 .next
 .bolt
+.env
 
 node_modules
 dist

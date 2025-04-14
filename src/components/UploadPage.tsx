@@ -7,6 +7,8 @@ import { ToastProvider, useToast } from "./ToastProvider";
 import { v4 as uuidv4 } from "uuid";
 import { formData } from "zod-form-data";
 import axios, { AxiosProgressEvent } from "axios";
+import { UploadRequest } from "@/types/models";
+import { OpensourceLicence } from "@/types/licence";
 
 interface UploadFile {
   id: string;
@@ -28,30 +30,33 @@ const UploadPage: React.FC = () => {
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [availableTags, setAvailableTags] = useState<TagCategory[]>([]);
-  const [license, setLicense] = useState("MIT");
+  const [license, setLicense] = useState<OpensourceLicence>("MIT");
   const [uploading, setUploading] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+
   const { showToast } = useToast();
 
   const LICENSES = ["MIT", "Apache 2.0", "BSD", "GPL", "Creative Commons"];
 
   useEffect(() => {
     fetchTags();
+    fetchUserProfile();
   }, []);
 
   const fetchTags = async () => {
     try {
       const { data: tagData, error } = await supabase
-        .from('tags')
-        .select('category, name')
-        .order('category')
-        .order('name');
+        .from("tags")
+        .select("category, name")
+        .order("category")
+        .order("name");
       console.log(tagData, error);
 
       if (error) throw error;
 
       // Group tags by category
       const groupedTags = tagData.reduce((acc: TagCategory[], tag) => {
-        const existingCategory = acc.find(c => c.name === tag.category);
+        const existingCategory = acc.find((c) => c.name === tag.category);
         if (existingCategory) {
           existingCategory.tags.push(tag.name);
         } else {
@@ -62,8 +67,26 @@ const UploadPage: React.FC = () => {
 
       setAvailableTags(groupedTags);
     } catch (error) {
-      console.error('Error fetching tags:', error);
-      showToast('Failed to load tags', 'danger');
+      console.error("Error fetching tags:", error);
+      showToast("Failed to load tags", "danger");
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('display_name')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      setDisplayName(data.display_name || user.email?.split('@')[0] || '');
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
     }
   };
 
@@ -175,56 +198,42 @@ const UploadPage: React.FC = () => {
     setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
-  const uploadFile = async (file: UploadFile) => {
+  const uploadFile = async (file: UploadFile, filePathPrefix: string) => {
     try {
-      const auth = await supabase.auth.getUser();
-      if (!auth.data.user) throw new Error("Not authenticated");
-
-      const userId = auth.data.user.id;
-      const filePath = `${userId}/${file.relativePath || file.file.name}`;
+      const filePath = `${filePathPrefix}/${
+        file.relativePath || file.file.name
+      }`;
 
       // Upload file to Supabase storage
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL!}/storage/v1/object/models/${filePath}`;
+      const url = `${process.env
+        .NEXT_PUBLIC_SUPABASE_URL!}/storage/v1/object/models/${filePath}`;
       let session = await supabase.auth.getSession();
       // @ts-ignore
       const headers = supabase.auth.headers;
-      headers['Authorization'] = `Bearer ${session.data.session!.access_token}`;
-      console.log(headers)
+      headers["Authorization"] = `Bearer ${session.data.session!.access_token}`;
+      console.log(headers);
 
       const formData = new FormData();
-      formData.append('cacheControl', '3600');
-      formData.append('', file.file);
+      formData.append("cacheControl", "3600");
+      formData.append("", file.file);
       let r = await axios.post(url, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           ...headers,
         },
-        onUploadProgress: (evt : AxiosProgressEvent)=>{
-          const percentage = Math.round((evt.loaded / (evt.total || Infinity))) * 100;
-          setFiles(prev => prev.map(f =>
-                  f.id === file.id ? { ...f, progress: percentage, status: 'uploading' } : f
-                ));
-        },
-      })
-      if (r.status != 200) throw new Error("Upload Failed!");
-
-      // Create database record
-      const { error: dbError } = await supabase.from("model_files").insert({
-        name,
-        description,
-        file_path: filePath,
-        size: file.file.size,
-        user_id: userId,
-        is_public: true,
-        metadata: {
-          original_filename: file.file.name,
-          content_type: file.file.type,
-          tags,
-          license,
+        onUploadProgress: (evt: AxiosProgressEvent) => {
+          const percentage =
+            Math.round(evt.loaded / (evt.total || Infinity)) * 100;
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === file.id
+                ? { ...f, progress: percentage, status: "uploading" }
+                : f
+            )
+          );
         },
       });
-
-      if (dbError) throw dbError;
+      if (r.status != 200) throw new Error("Upload Failed!");
 
       setFiles((prev) =>
         prev.map((f) =>
@@ -250,11 +259,41 @@ const UploadPage: React.FC = () => {
 
     setUploading(true);
     try {
-      await Promise.all(files.map((file) => uploadFile(file)));
+      // todo error handle (transactions)
+      // upload files
+      const auth = await supabase.auth.getUser();
+      if (!auth.data.user) throw new Error("Not authenticated");
+
+      const filePathPrefix = `${auth.data.user.id}/${name}-${Date.now()}`;
+      // await Promise.all(files.map((file) => uploadFile(file, filePathPrefix)));
       showToast("All files uploaded successfully", "success");
+
+
+      // upload model
+      let token = (await supabase.auth.getSession()).data.session?.access_token!;
+      let modelName = `${displayName}/${name}`
+      let req : UploadRequest = {
+        name: modelName,
+        description,
+        tags,
+        license,
+        folder_path: filePathPrefix
+      }
+      let resp = await fetch("/api/upload", {
+        method: "POST",
+        headers: {
+          'authorization': token
+        },
+        body: JSON.stringify(req)
+      })
+
     } catch (error) {
       console.log(error);
-      showToast("Some files failed to upload", "danger");
+      if (error instanceof Error) {
+        showToast(error.message, "danger");
+      } else {
+        showToast("unknown error when upload model", "danger");
+      }
     } finally {
       setUploading(false);
     }
@@ -375,13 +414,18 @@ const UploadPage: React.FC = () => {
               <label className="block text-gray-700 font-medium mb-2">
                 Model Name
               </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
+              <div className="flex items-center">
+                <span className="bg-gray-100 px-3 py-2 rounded-l-lg text-gray-600 border border-r-0 border-gray-300">
+                  {displayName}/
+                </span>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
             </div>
 
             {/* Description */}
