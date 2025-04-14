@@ -27,6 +27,7 @@ interface TagCategory {
 const UploadPage: React.FC = () => {
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [name, setName] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [availableTags, setAvailableTags] = useState<TagCategory[]>([]);
@@ -37,6 +38,30 @@ const UploadPage: React.FC = () => {
   const { showToast } = useToast();
 
   const LICENSES = ["MIT", "Apache 2.0", "BSD", "GPL", "Creative Commons"];
+
+  const validateModelName = (value: string): string | null => {
+    if (!value) {
+      return "Model name is required";
+    }
+
+    // Check length
+    if (value.length > 255) {
+      return "Model name must be less than 255 characters";
+    }
+
+    // Check for valid characters (alphanumeric, hyphen, underscore)
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(value)) {
+      return "Model name can only contain letters, numbers, hyphens, and underscores, and must start with a letter or number";
+    }
+
+    return null;
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    setName(newName);
+    setNameError(validateModelName(newName));
+  };
 
   useEffect(() => {
     fetchTags();
@@ -257,35 +282,36 @@ const UploadPage: React.FC = () => {
     e.preventDefault();
     if (files.length === 0) return;
 
+    const nameValidationError = validateModelName(name);
+    if (nameValidationError) {
+      setNameError(nameValidationError);
+      return;
+    }
+
     setUploading(true);
     try {
-      // todo error handle (transactions)
-      // upload files
       const auth = await supabase.auth.getUser();
       if (!auth.data.user) throw new Error("Not authenticated");
 
       const filePathPrefix = `${auth.data.user.id}/${name}-${Date.now()}`;
-      // await Promise.all(files.map((file) => uploadFile(file, filePathPrefix)));
       showToast("All files uploaded successfully", "success");
 
-
-      // upload model
       let token = (await supabase.auth.getSession()).data.session?.access_token!;
-      let modelName = `${displayName}/${name}`
-      let req : UploadRequest = {
+      let modelName = `${displayName}/${name}`;
+      let req: UploadRequest = {
         name: modelName,
         description,
         tags,
         license,
         folder_path: filePathPrefix
-      }
+      };
       let resp = await fetch("/api/upload", {
         method: "POST",
         headers: {
           'authorization': token
         },
         body: JSON.stringify(req)
-      })
+      });
 
     } catch (error) {
       console.log(error);
@@ -421,11 +447,19 @@ const UploadPage: React.FC = () => {
                 <input
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={handleNameChange}
+                  className={`flex-1 px-4 py-2 border rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    nameError ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   required
                 />
               </div>
+              {nameError && (
+                <p className="mt-1 text-sm text-red-500">{nameError}</p>
+              )}
+              <p className="mt-1 text-sm text-gray-500">
+                Only letters, numbers, hyphens, and underscores are allowed. Must start with a letter or number.
+              </p>
             </div>
 
             {/* Description */}
@@ -504,7 +538,7 @@ const UploadPage: React.FC = () => {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={files.length === 0 || uploading}
+              disabled={files.length === 0 || uploading || !!nameError}
               className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400"
             >
               {uploading ? "Uploading..." : "Upload Models"}
