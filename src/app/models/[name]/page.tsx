@@ -24,136 +24,9 @@ import {
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
-const MOCK_MODEL = {
-  id: "1",
-  name: "OpenWalk-v1",
-  description:
-    "State-of-the-art humanoid walking model with dynamic balance control and natural gait synthesis. This model implements advanced locomotion algorithms based on reinforcement learning and optimal control theory.",
-  model_folder_path: "/models/openwalk-v1.pth",
-  size: 256 * 1024 * 1024, // 256MB
-  downloads: 15234,
-  created_at: "2025-03-15T10:00:00Z",
-  updated_at: "2025-04-01T15:30:00Z",
-  is_public: true,
-  metadata: {
-    tags: ["locomotion", "walking", "balance", "reinforcement-learning"],
-    license: "MIT",
-    framework: "PyTorch",
-    version: "1.0.0",
-    requirements: {
-      python: ">=3.8",
-      torch: ">=2.0.0",
-      cuda: ">=11.7",
-    },
-    benchmarks: {
-      success_rate: "94.5%",
-      inference_time: "15ms",
-      stability_score: "89.2%",
-    },
-  },
-  users: {
-    display_name: "OpenHumanoid",
-    email: "team@openhumanoid.ai",
-  },
-  stars: 2451,
-  forks: 342,
-  readme: `
-# OpenWalk-v1
-
-A state-of-the-art humanoid walking model that achieves natural and robust bipedal locomotion.
-## Features
-
-- Dynamic balance control
-- Natural gait synthesis
-- Obstacle avoidance
-- Multi-terrain adaptation
-- Energy-efficient motion
-
-## Requirements
-
-- Python >= 3.8
-- PyTorch >= 2.0.0
-- CUDA >= 11.7
-
-## Quick Start
-
-\`\`\`python
-from openhumanoid import OpenWalk
-
-# Initialize the model
-model = OpenWalk.from_pretrained('OpenWalk-v1')  
-
-# Set walking parameters
-params = {
-    'velocity': 1.0,  # m/s
-    'direction': [1.0, 0.0],  # forward direction
-    'step_height': 0.1  # meters
-}
-
-# Generate walking motion
-motion = model.generate_motion(params)
-\`\`\`
-
-## Performance
-
-- Success Rate: 94.5%
-- Average Inference Time: 15ms
-- Stability Score: 89.2%
-
-## Citation
-
-If you use this model in your research, please cite:
-
-\`\`\`bibtex
-@article{openwalk2025,
-  title={OpenWalk: A Robust Framework for Humanoid Locomotion},
-  author={OpenHumanoid Team},
-  journal={arXiv preprint arXiv:2025.12345},
-  year={2025}
-}
-\`\`\`
-`,
-  files: [
-    {
-      name: "openwalk-v1.pth",
-      size: 256 * 1024 * 1024,
-      type: "model",
-    },
-    {
-      name: "config.yaml",
-      size: 2.5 * 1024,
-      type: "config",
-    },
-    {
-      name: "requirements.txt",
-      size: 1024,
-      type: "text",
-    },
-  ],
-  versions: [
-    {
-      version: "v1.0.0",
-      date: "2025-03-15T10:00:00Z",
-      description: "Initial release with core walking capabilities",
-      changes: [
-        "Implemented dynamic balance control",
-        "Added natural gait synthesis",
-        "Integrated obstacle avoidance",
-      ],
-    },
-    {
-      version: "v1.0.1",
-      date: "2025-04-01T15:30:00Z",
-      description: "Performance improvements and bug fixes",
-      changes: [
-        "Improved inference speed by 20%",
-        "Fixed stability issues on uneven terrain",
-        "Added multi-terrain support",
-      ],
-    },
-  ],
-};
 interface ModelDetails {
   id: string;
   name: string;
@@ -164,8 +37,6 @@ interface ModelDetails {
   created_at: string;
   updated_at: string;
   is_public: boolean;
-
-  // meta data
   tags: string[];
   license: string;
   framework?: string;
@@ -200,9 +71,8 @@ export default function ModelDetails() {
   const [model, setModel] = useState<ModelDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"readme" | "files" | "versions">(
-    "readme"
-  );
+  const [activeTab, setActiveTab] = useState<"readme" | "files" | "versions">("readme");
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const {
@@ -223,7 +93,6 @@ export default function ModelDetails() {
       setLoading(true);
       setError(null);
 
-      // fetch model details
       const modelName = (params.name as string).replace("_", "/");
       const { data: modelDataRsp, error: modelError } = await supabase
         .from("models")
@@ -257,7 +126,6 @@ export default function ModelDetails() {
         },
       };
 
-      // fetch model file details
       let { data: modelFileRsp, error: modelFileError } = await supabase.storage
         .from("models")
         .list(modelData.model_folder_path);
@@ -299,6 +167,62 @@ export default function ModelDetails() {
       throw new Error("failed to read README");
     }
     return readme.text();
+  };
+
+  const listFilesRecursively = async (folderPath: string, zip: JSZip, currentPath: string = '') => {
+    const { data: items, error: listError } = await supabase.storage
+      .from('models')
+      .list(folderPath);
+
+    if (listError) throw listError;
+    if (!items) return;
+
+    for (const item of items) {
+      const fullPath = `${folderPath}/${item.name}`;
+      console.log(item)
+      // no metadata, treat as folder
+      if (!item.metadata) {
+        await listFilesRecursively(fullPath, zip, `${currentPath}${item.name}/`);
+      } else {
+        console.log(fullPath)
+        const { data, error: downloadError } = await supabase.storage
+          .from('models')
+          .download(fullPath);
+
+        if (downloadError) throw downloadError;
+        if (!data) throw new Error(`Failed to download ${item.name}`);
+
+        zip.file(`${currentPath}${item.name}`, data);
+      }
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!model) return;
+
+    try {
+      setDownloading(true);
+      const zip = new JSZip();
+      
+      await listFilesRecursively(model.model_folder_path, zip);
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      saveAs(zipBlob, `${model.name}.zip`);
+
+      const { error: updateError } = await supabase
+        .from('models')
+        .update({ downloads: (model.downloads || 0) + 1 })
+        .eq('id', model.id);
+
+      if (updateError) {
+        console.error('Failed to update download count:', updateError);
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Failed to download model files. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   if (loading) {
@@ -346,7 +270,6 @@ export default function ModelDetails() {
       />
 
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
         <div className="bg-white border-b">
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center text-sm text-gray-600 mb-4">
@@ -383,9 +306,22 @@ export default function ModelDetails() {
               </div>
 
               <div className="flex items-center gap-2">
-                <button className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50">
-                  <Download size={16} />
-                  <span>{model.downloads || 0}</span>
+                <button 
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {downloading ? (
+                    <>
+                      <Loader2 className="animate-spin" size={16} />
+                      <span>Downloading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download size={16} />
+                      <span>{model.downloads || 0}</span>
+                    </>
+                  )}
                 </button>
                 <button className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50">
                   <Share2 size={16} />
@@ -395,7 +331,6 @@ export default function ModelDetails() {
           </div>
         </div>
 
-        {/* Navigation */}
         <div className="bg-white border-b">
           <div className="container mx-auto px-4">
             <div className="flex items-center gap-8">
@@ -436,10 +371,8 @@ export default function ModelDetails() {
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-3 gap-8">
-            {/* Main Content */}
             <div className="col-span-2">
               <div className="bg-white rounded-lg shadow-sm p-6 prose max-w-none">
                 {activeTab === "readme" && (
@@ -499,9 +432,7 @@ export default function ModelDetails() {
               </div>
             </div>
 
-            {/* Sidebar */}
             <div className="space-y-6">
-              {/* About */}
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-semibold mb-4">About</h3>
                 <div className="space-y-4">
@@ -574,7 +505,6 @@ export default function ModelDetails() {
                   )}
               </div>
 
-              {/* Deploy */}
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-semibold mb-4">Deploy</h3>
                 <button className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
