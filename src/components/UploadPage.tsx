@@ -99,19 +99,21 @@ const UploadPage: React.FC = () => {
 
   const fetchUserProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('users')
-        .select('display_name')
-        .eq('id', user.id)
+        .from("users")
+        .select("display_name")
+        .eq("id", user.id)
         .single();
 
       if (error) throw error;
-      setDisplayName(data.display_name || user.email?.split('@')[0] || '');
+      setDisplayName(data.display_name || user.email?.split("@")[0] || "");
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error("Error fetching user profile:", error);
     }
   };
 
@@ -174,7 +176,6 @@ const UploadPage: React.FC = () => {
 
   const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-
     if (e.dataTransfer.items) {
       await processFiles(e.dataTransfer.items);
     } else {
@@ -186,13 +187,18 @@ const UploadPage: React.FC = () => {
   const handleFolderSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
-      const newFiles: UploadFile[] = selectedFiles.map((file) => ({
-        id: uuidv4(),
-        file,
-        progress: 0,
-        status: "pending",
-        relativePath: file.webkitRelativePath || file.name,
-      }));
+      console.log(selectedFiles);
+      const newFiles: UploadFile[] = selectedFiles.map((file) => {
+        let relativePath = file.webkitRelativePath ? file.webkitRelativePath.substring(file.webkitRelativePath.indexOf('/') + 1) : undefined;
+        relativePath = relativePath || file.name;
+        return {
+          id: uuidv4(),
+          file,
+          progress: 0,
+          status: "pending",
+          relativePath: relativePath,
+        };
+      });
       setFiles((prev) => [...prev, ...newFiles]);
     }
   };
@@ -293,26 +299,29 @@ const UploadPage: React.FC = () => {
       const auth = await supabase.auth.getUser();
       if (!auth.data.user) throw new Error("Not authenticated");
 
+      // upload file
       const filePathPrefix = `${auth.data.user.id}/${name}-${Date.now()}`;
+      await Promise.all(files.map((file) => uploadFile(file, filePathPrefix)));
       showToast("All files uploaded successfully", "success");
 
-      let token = (await supabase.auth.getSession()).data.session?.access_token!;
+      // update database
+      let token = (await supabase.auth.getSession()).data.session
+        ?.access_token!;
       let modelName = `${displayName}/${name}`;
       let req: UploadRequest = {
         name: modelName,
         description,
         tags,
         license,
-        folder_path: filePathPrefix
+        folder_path: filePathPrefix,
       };
       let resp = await fetch("/api/upload", {
         method: "POST",
         headers: {
-          'authorization': token
+          authorization: token,
         },
-        body: JSON.stringify(req)
+        body: JSON.stringify(req),
       });
-
     } catch (error) {
       console.log(error);
       if (error instanceof Error) {
@@ -449,7 +458,7 @@ const UploadPage: React.FC = () => {
                   value={name}
                   onChange={handleNameChange}
                   className={`flex-1 px-4 py-2 border rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    nameError ? 'border-red-500' : 'border-gray-300'
+                    nameError ? "border-red-500" : "border-gray-300"
                   }`}
                   required
                 />
@@ -458,7 +467,8 @@ const UploadPage: React.FC = () => {
                 <p className="mt-1 text-sm text-red-500">{nameError}</p>
               )}
               <p className="mt-1 text-sm text-gray-500">
-                Only letters, numbers, hyphens, and underscores are allowed. Must start with a letter or number.
+                Only letters, numbers, hyphens, and underscores are allowed.
+                Must start with a letter or number.
               </p>
             </div>
 
